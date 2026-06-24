@@ -2,14 +2,14 @@ export interface Task {
   id: string;
   title: string;
   rawInput: string;
-  deadline: string; // ISO string
-  createdAt: string; // ISO string
+  deadline: string;
+  createdAt: string;
   effortEstimateMins: number;
   category: "assignment" | "bill" | "interview" | "meeting" | "custom";
   status: "active" | "completed" | "missed" | "archived";
   riskState: "calm" | "watch" | "at_risk" | "critical";
   riskReason: string;
-  lastRiskCheckAt: string; // ISO string
+  lastRiskCheckAt: string;
   subSteps: SubStep[];
   artifacts: Artifact[];
   chatHistory: ChatMessage[];
@@ -21,10 +21,10 @@ export interface SubStep {
   taskId: string;
   title: string;
   order: number;
-  subDeadline: string; // ISO string
+  subDeadline: string;
   estimateMins: number;
   status: "pending" | "in_progress" | "done" | "skipped";
-  touchedAt: string | null; // ISO string | null
+  touchedAt: string | null;
   artifact: Artifact | null;
 }
 
@@ -32,8 +32,8 @@ export interface Artifact {
   id: string;
   type: "outline" | "checklist" | "draft_email" | "info_summary" | "question_list" | "template";
   title: string;
-  content: string; // markdown string
-  generatedAt: string; // ISO string
+  content: string;
+  generatedAt: string;
   approvedByUser: boolean;
 }
 
@@ -42,14 +42,14 @@ export interface ChatMessage {
   taskId: string;
   role: "user" | "agent" | "system";
   content: string;
-  createdAt: string; // ISO string
+  createdAt: string;
   toolCalls: any[] | null;
 }
 
 export interface ReplanEvent {
   id: string;
   triggeredByTaskId: string;
-  triggeredAt: string; // ISO string
+  triggeredAt: string;
   reason: string;
   beforeSnapshot: { taskId: string; subDeadlines: string[] }[];
   afterSnapshot: { taskId: string; subDeadlines: string[] }[];
