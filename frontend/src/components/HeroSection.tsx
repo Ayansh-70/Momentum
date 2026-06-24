@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 export default function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-end bg-hero-bg overflow-hidden">
@@ -65,18 +67,18 @@ export default function HeroSection() {
           className="flex flex-wrap gap-3 opacity-0 animate-fade-up pointer-events-auto"
           style={{ animationDelay: "0.7s" }}
         >
-          <a
-            href="/app"
-            className="bg-primary text-primary-foreground px-8 py-4 text-sm rounded-sm font-bold cursor-pointer hover:brightness-110 transition-all active:scale-[0.97] uppercase tracking-wide"
+          <Link
+            to="/app"
+            className="bg-primary text-primary-foreground px-8 py-4 text-sm rounded-sm font-bold cursor-pointer hover:brightness-110 transition-all active:scale-[0.97] uppercase tracking-wide inline-block"
           >
             Launch Momentum
-          </a>
-          <a
-            href="#how-it-works"
-            className="bg-white/10 text-foreground border border-white/20 px-8 py-4 text-sm rounded-sm font-bold cursor-pointer hover:bg-white/20 transition-all active:scale-[0.97] uppercase tracking-wide backdrop-blur-sm"
+          </Link>
+          <Link
+            to="/how-it-works"
+            className="bg-white/10 text-foreground border border-white/20 px-8 py-4 text-sm rounded-sm font-bold cursor-pointer hover:bg-white/20 transition-all active:scale-[0.97] uppercase tracking-wide backdrop-blur-sm inline-block"
           >
             See How It Works
-          </a>
+          </Link>
         </div>
 
         {/* Trust line */}
