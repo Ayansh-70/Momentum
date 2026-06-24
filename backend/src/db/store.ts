@@ -26,12 +26,27 @@ export const createTask = (task: Task): Task => {
   return task;
 };
 
-export const updateTask = (task: Task): Task => {
+export const getAllTasks = (): Task[] => {
+  return getTasks();
+};
+
+export const updateTask = (id: string, patch: Partial<Task>): Task | undefined => {
   const tasks = getTasks();
-  const index = tasks.findIndex(t => t.id === task.id);
+  const index = tasks.findIndex(t => t.id === id);
   if (index !== -1) {
-    tasks[index] = task;
+    tasks[index] = { ...tasks[index], ...patch } as Task;
     fs.writeFileSync(DATA_FILE, JSON.stringify(tasks, null, 2), 'utf-8');
+    return tasks[index];
   }
-  return task;
+  return undefined;
+};
+export const deleteTask = (id: string): boolean => {
+  const tasks = getTasks();
+  const index = tasks.findIndex(t => t.id === id);
+  if (index !== -1) {
+    tasks.splice(index, 1);
+    fs.writeFileSync(DATA_FILE, JSON.stringify(tasks, null, 2), 'utf-8');
+    return true;
+  }
+  return false;
 };

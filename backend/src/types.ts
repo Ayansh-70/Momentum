@@ -7,13 +7,16 @@ export interface Task {
   effortEstimateMins: number;
   category: "assignment" | "bill" | "interview" | "meeting" | "custom";
   status: "active" | "completed" | "missed" | "archived";
-  riskState: "calm" | "watch" | "at_risk" | "critical";
+  riskState?: "calm" | "watch" | "at_risk" | "critical";
   riskReason: string;
   lastRiskCheckAt: string; // ISO string
   subSteps: SubStep[];
   artifacts: Artifact[];
   chatHistory: ChatMessage[];
   replanHistory: ReplanEvent[];
+  lastTouchedAt?: string;
+  velocityProfile?: "fast_starter" | "steady" | "procrastinator" | "unknown";
+  priority?: "high" | "medium" | "low";
 }
 
 export interface SubStep {

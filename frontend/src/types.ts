@@ -14,6 +14,9 @@ export interface Task {
   artifacts: Artifact[];
   chatHistory: ChatMessage[];
   replanHistory: ReplanEvent[];
+  lastTouchedAt?: string;
+  velocityProfile?: "fast_starter" | "steady" | "procrastinator" | "unknown";
+  priority?: "high" | "medium" | "low";
 }
 
 export interface SubStep {
