@@ -31,13 +31,15 @@ export default function AgentChat({ isOpen, onClose, tasks }: AgentChatProps) {
         body: JSON.stringify({ message: text })
       });
       
-      if (!res.ok) throw new Error("Network response was not ok");
-      
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Network response was not ok");
+      }
+      
       setMessages(prev => [...prev, { role: "agent", content: data.reply }]);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      setMessages(prev => [...prev, { role: "agent", content: "The Agent Core is unavailable. Please try again." }]);
+      setMessages(prev => [...prev, { role: "agent", content: e.message || "The Agent Core is unavailable. Please try again." }]);
     } finally {
       setLoading(false);
     }
