@@ -18,9 +18,23 @@ export default function TaskForm({ onSubmit, isLoading }: TaskFormProps) {
   
   const [deadline, setDeadline] = useState(defaultDeadline);
 
+  const getMinDateTime = () => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  };
+
+  const minDateTime = getMinDateTime();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !deadline) return;
+
+    if (new Date(deadline).getTime() <= Date.now()) {
+      alert("Cannot schedule a task for a time that has already passed.");
+      return;
+    }
+
     await onSubmit({ title, rawInput, deadline });
     setTitle('');
     setRawInput('');
@@ -62,6 +76,8 @@ export default function TaskForm({ onSubmit, isLoading }: TaskFormProps) {
             required
             type="datetime-local"
             value={deadline}
+            min={minDateTime}
+            onFocus={(e) => { e.target.min = getMinDateTime(); }}
             onChange={(e) => setDeadline(e.target.value)}
             className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all [color-scheme:dark]"
             disabled={isLoading}
