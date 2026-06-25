@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import crypto, { randomUUID as uuidv4 } from 'crypto';
-import { decomposeTask, riskAssess, cascadeReplan, generateArtifact } from './services/gemini';
+import { decomposeTask, riskAssess, cascadeReplan, generateArtifact, agentChat } from './services/gemini';
 import { createTask, getTasks, getTaskById, getAllTasks, updateTask, deleteTask } from './db/store';
 import { getNow, setSimulatedTime, clearSimulatedTime } from './utils/clock';
 import { Task, SubStep, Artifact } from './types';
@@ -230,6 +230,27 @@ app.post('/api/clock/simulate', (req, res) => {
 app.post('/api/clock/real', (req, res) => {
   clearSimulatedTime();
   res.json({ message: "Real time restored", currentTime: getNow() });
+});
+
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    const allTasks = getAllTasks();
+    const result = await agentChat({
+      message,
+      tasks: allTasks,
+      current_time_iso: new Date().toISOString()
+    });
+
+    res.json({ reply: result.reply });
+  } catch (error: any) {
+    console.error("agentChat error:", error);
+    res.status(500).json({ error: "Agent Core failed to reply" });
+  }
 });
 
 const PORT = process.env.PORT || 3000;

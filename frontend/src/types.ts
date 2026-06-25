@@ -7,6 +7,7 @@ export interface Task {
   effortEstimateMins: number;
   category: "assignment" | "bill" | "interview" | "meeting" | "custom";
   status: "active" | "completed" | "missed" | "archived";
+  completedAt?: string;
   riskState: "calm" | "watch" | "at_risk" | "critical";
   riskReason: string;
   lastRiskCheckAt: string;

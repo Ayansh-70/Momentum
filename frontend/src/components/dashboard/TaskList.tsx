@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, AlertTriangle, FileText, CheckCircle2, Circle, Pencil, Trash, Sparkles } from 'lucide-react';
+import { Clock, AlertTriangle, FileText, CheckCircle2, Circle, Pencil, Trash, Sparkles, MessageCircle } from 'lucide-react';
 import type { Task, SubStep } from '../../types';
+import AgentChat from './AgentChat';
 
 interface TaskListProps {
   tasks: Task[];
@@ -35,6 +36,8 @@ export default function TaskList({ tasks }: TaskListProps) {
   }>(null);
   const [replanLoading, setReplanLoading] = useState(false);
   const [showReplanModal, setShowReplanModal] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
 
   // Feature 2: Escape key listener for modal
   useEffect(() => {
@@ -87,6 +90,43 @@ export default function TaskList({ tasks }: TaskListProps) {
     } finally {
       setEditSaving(false);
       setEditingId(null);
+    }
+  };
+
+  const handleCompleteTask = async (id: string) => {
+    try {
+      const now = new Date().toISOString();
+      const res = await fetch(`http://localhost:3000/api/tasks/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed', completedAt: now })
+      });
+      if (res.ok) {
+        setLocalTasks(prev => prev.map(t => t.id === id ? { ...t, status: 'completed', completedAt: now } : t));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleToggleSubstep = async (taskId: string, index: number) => {
+    const task = localTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const newSubSteps = [...task.subSteps];
+    const currentStatus = newSubSteps[index].status;
+    newSubSteps[index].status = currentStatus === 'done' ? 'pending' : 'done';
+
+    setLocalTasks(prev => prev.map(t => t.id === taskId ? { ...t, subSteps: newSubSteps } : t));
+
+    try {
+      await fetch(`http://localhost:3000/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subSteps: newSubSteps })
+      });
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -144,25 +184,39 @@ export default function TaskList({ tasks }: TaskListProps) {
     }
   };
 
-  if (localTasks.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md">
-        <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-          <CheckCircle2 className="text-muted-foreground" size={32} />
-        </div>
-        <h3 className="text-lg font-bold text-foreground">Zero Active Targets</h3>
-        <p className="text-sm text-muted-foreground mt-1 max-w-sm text-center">
-          The queue is clear. Awaiting new objectives to decompose and execute.
-        </p>
-      </div>
-    );
-  }
+  const activeTasks = localTasks.filter(t => t.status !== 'completed');
+  const completedTasks = localTasks.filter(t => t.status === 'completed');
+  const visibleTasks = activeTab === 'active' ? activeTasks : completedTasks;
 
-  const criticalTaskId = localTasks.find(t => riskMap[t.id] === 'critical')?.id;
-  const showCriticalBanner = !!criticalTaskId;
+  const criticalTaskId = activeTasks.find(t => riskMap[t.id] === 'critical')?.id;
+  const showCriticalBanner = activeTab === 'active' && !!criticalTaskId;
 
   return (
     <>
+      {/* Tab Switcher */}
+      <div className="flex items-center gap-2 mb-6">
+        <button
+          onClick={() => setActiveTab("active")}
+          className={`text-[10px] uppercase tracking-widest font-bold px-4 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+            activeTab === "active" 
+              ? "bg-primary/20 border border-primary/40 text-primary" 
+              : "bg-white/5 border border-white/10 text-foreground/40 hover:text-foreground/60 hover:bg-white/10"
+          }`}
+        >
+          ACTIVE OBJECTIVES ({activeTasks.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("completed")}
+          className={`text-[10px] uppercase tracking-widest font-bold px-4 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+            activeTab === "completed" 
+              ? "bg-primary/20 border border-primary/40 text-primary" 
+              : "bg-white/5 border border-white/10 text-foreground/40 hover:text-foreground/60 hover:bg-white/10"
+          }`}
+        >
+          COMPLETED ({completedTasks.length})
+        </button>
+      </div>
+
       <div className="space-y-6">
         {showCriticalBanner && (
           <div className="w-full rounded-2xl border border-red-500/30 bg-red-500/5 backdrop-blur-md px-6 py-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -185,29 +239,43 @@ export default function TaskList({ tasks }: TaskListProps) {
           </div>
         )}
 
-        {localTasks.map(task => {
+        {visibleTasks.length === 0 && (
+          <div className="text-foreground/30 text-sm text-center py-12">
+            {activeTab === "active" ? "No active objectives. Add one above." : "No completed tasks yet. Keep going."}
+          </div>
+        )}
+
+        {visibleTasks.map(task => {
           const currentRisk = riskMap[task.id] || task.riskState || 'evaluating...';
 
           return (
-            <div key={task.id} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md">
+            <div key={task.id} className={`bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md ${task.status === 'completed' ? 'opacity-75' : ''}`}>
               {/* Task Header */}
-              <div className="p-6 border-b border-white/10 flex flex-col sm:flex-row justify-between items-start gap-4">
+              <div className="p-7 border-b border-white/10 flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div className="flex-1 w-full">
-                  <div className="flex justify-between items-center w-full mb-3">
+                  <div className="flex justify-between items-center w-full mb-6">
                     <div className="flex items-center gap-3">
-                      <span className={`px-2.5 py-1 text-[10px] uppercase tracking-widest font-bold rounded-sm flex items-center gap-1.5 ${
-                        currentRisk === 'calm' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                        currentRisk === 'watch' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
-                        currentRisk === 'at_risk' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
-                        currentRisk === 'critical' ? 'bg-destructive/20 text-destructive border border-destructive/30' :
-                        'bg-white/10 text-muted-foreground border border-white/20'
-                      }`}>
-                        {riskLoading[task.id] && <div className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />}
-                        Status: {currentRisk}
-                      </span>
-                      <span className="text-[10px] uppercase tracking-widest font-bold text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-sm">
-                        {task.category}
-                      </span>
+                      {task.status === 'completed' ? (
+                        <span className="px-2.5 py-1 text-[10px] uppercase tracking-widest font-bold rounded-sm flex items-center gap-1.5 bg-green-500/20 text-green-400 border border-green-500/40">
+                          ✓ COMPLETED
+                        </span>
+                      ) : (
+                        <>
+                          <span className={`px-2.5 py-1 text-[10px] uppercase tracking-widest font-bold rounded-sm flex items-center gap-1.5 ${
+                            currentRisk === 'calm' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                            currentRisk === 'watch' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                            currentRisk === 'at_risk' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
+                            currentRisk === 'critical' ? 'bg-destructive/20 text-destructive border border-destructive/30' :
+                            'bg-white/10 text-muted-foreground border border-white/20'
+                          }`}>
+                            {riskLoading[task.id] && <div className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />}
+                            Status: {currentRisk}
+                          </span>
+                          <span className="text-[10px] uppercase tracking-widest font-bold text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-sm">
+                            {task.category}
+                          </span>
+                        </>
+                      )}
                     </div>
                     
                     <div className="flex gap-2 shrink-0">
@@ -219,6 +287,9 @@ export default function TaskList({ tasks }: TaskListProps) {
                         </div>
                       ) : (
                         <>
+                          {task.status !== 'completed' && (
+                            <button onClick={() => handleCompleteTask(task.id)} className="text-[10px] uppercase tracking-widest font-bold px-2.5 py-1 rounded-sm transition-colors cursor-pointer text-green-400 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 flex items-center gap-1.5"><CheckCircle2 size={12}/> Complete</button>
+                          )}
                           <button onClick={() => { setEditingId(task.id); setEditForm({ title: task.title, deadline: task.deadline }); }} className="text-[10px] uppercase tracking-widest font-bold px-2.5 py-1 rounded-sm transition-colors cursor-pointer text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 flex items-center gap-1.5"><Pencil size={12}/> Edit</button>
                           <button onClick={() => setDeleteConfirm(task.id)} className="text-[10px] uppercase tracking-widest font-bold px-2.5 py-1 rounded-sm transition-colors cursor-pointer text-muted-foreground bg-white/5 hover:bg-white/10 border border-white/10 flex items-center gap-1.5"><Trash size={12}/></button>
                         </>
@@ -250,8 +321,13 @@ export default function TaskList({ tasks }: TaskListProps) {
                     </div>
                   ) : (
                     <>
-                      <h3 className="text-xl font-bold text-foreground">{task.title}</h3>
-                      <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                      <h3 className={`text-2xl font-bold ${task.status === 'completed' ? 'line-through text-foreground/50' : 'text-foreground'}`}>{task.title}</h3>
+                      {task.status === 'completed' && task.completedAt && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Completed · {new Date(task.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1.5">
                           <Clock size={14} /> Due {new Date(task.deadline).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                         </span>
@@ -262,62 +338,61 @@ export default function TaskList({ tasks }: TaskListProps) {
                     </>
                   )}
                 </div>
-                {task.riskReason && (
-                  <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg max-w-xs shrink-0">
-                    <p className="text-xs text-destructive-foreground font-medium flex gap-2">
-                      <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-                      {task.riskReason}
-                    </p>
-                  </div>
-                )}
               </div>
 
               {/* Task Body: SubSteps & Artifacts */}
-              <div className="p-6 bg-black/20 flex flex-col lg:flex-row gap-8">
+              <div className="p-7 bg-black/20 flex flex-col lg:flex-row gap-8">
                 {/* Substeps Timeline */}
                 <div className="flex-1">
-                  <h4 className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-4">Execution Sequence</h4>
-                  <div className="space-y-4">
+                  <h4 className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-6">Execution Sequence</h4>
+                  <div className="space-y-0">
                     {task.subSteps.map((step: SubStep, idx: number) => (
-                      <div key={step.id} className="flex gap-4 relative">
+                      <div key={step.id} className={`flex gap-5 relative py-3.5 ${idx !== task.subSteps.length - 1 ? 'border-b border-white/5' : ''}`}>
                         {/* Timeline line */}
                         {idx !== task.subSteps.length - 1 && (
-                          <div className="absolute top-6 left-2.5 bottom-[-16px] w-[2px] bg-white/10" />
+                          <div className="absolute top-10 left-2.5 bottom-[-16px] w-[2px] bg-white/10" />
                         )}
                         
-                        <div className="shrink-0 mt-0.5 relative z-10 bg-black">
+                        <div 
+                          className="shrink-0 mt-0.5 relative z-10 bg-black cursor-pointer hover:scale-110 transition-transform"
+                          onClick={() => handleToggleSubstep(task.id, idx)}
+                        >
                           {step.status === 'done' ? (
                             <CheckCircle2 className="text-primary" size={20} />
                           ) : step.status === 'in_progress' ? (
                             <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                           ) : (
-                            <Circle className="text-muted-foreground" size={20} />
+                            <Circle className="text-muted-foreground hover:text-primary transition-colors" size={20} />
                           )}
                         </div>
                         
                         <div className="flex-1 pb-1">
-                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
-                            <div className="flex items-center gap-2">
-                              <p className={`text-sm font-medium ${step.status === 'done' ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex justify-between items-start gap-3">
+                              <p className={`text-base font-medium ${step.status === 'done' ? 'text-foreground/50 line-through' : 'text-foreground'} leading-tight mt-0.5`}>
                                 {step.title}
                               </p>
-                              {!step.artifact && (
+                              <span className="text-sm font-mono text-muted-foreground shrink-0 bg-white/5 px-2 py-0.5 rounded whitespace-nowrap">
+                                {new Date(step.subDeadline).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                              <p className="text-sm text-muted-foreground">Est: {step.estimateMins}m</p>
+                              
+                              {!step.artifact && task.status !== 'completed' && (
                                 <button 
                                   onClick={() => handleDraft(task.id, idx)} 
                                   disabled={artifactLoading[`${task.id}-${idx}`]}
-                                  className="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-sm transition-colors cursor-pointer text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 flex items-center gap-1 shrink-0"
+                                  className="text-xs uppercase tracking-widest font-bold px-3 py-1.5 rounded-sm transition-colors cursor-pointer text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 flex items-center gap-1 shrink-0"
                                 >
                                   {artifactLoading[`${task.id}-${idx}`] ? (
-                                    <div className="w-2 h-2 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                                  ) : <Sparkles size={10} />} Draft
+                                    <div className="w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                                  ) : <Sparkles size={12} />} Draft
                                 </button>
                               )}
                             </div>
-                            <span className="text-xs font-mono text-muted-foreground shrink-0 bg-white/5 px-2 py-0.5 rounded">
-                              {new Date(step.subDeadline).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                            </span>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">Est: {step.estimateMins}m</p>
                         </div>
                       </div>
                     ))}
@@ -328,17 +403,17 @@ export default function TaskList({ tasks }: TaskListProps) {
                 <div className="flex-1 lg:max-w-sm space-y-6">
                   {task.subSteps.filter((s: SubStep) => s.artifact).map((step: SubStep) => (
                     <div key={step.id}>
-                      <h4 className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-4 flex items-center gap-2">
+                      <h4 className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-5 flex items-center gap-2">
                         <FileText size={14} className="text-primary" /> {step.title} Artifact
                       </h4>
-                      <div className="bg-white/5 border border-white/10 rounded-xl p-4 shadow-inner">
-                        <div className="flex justify-between items-center mb-3">
+                      <div className="bg-white/5 border border-white/10 rounded-xl p-6 shadow-inner">
+                        <div className="flex justify-between items-center mb-4">
                           <span className="text-[10px] uppercase tracking-widest font-bold text-foreground/70 bg-white/10 px-2 py-1 rounded">
                             {step.artifact!.type.replace('_', ' ')}
                           </span>
                         </div>
-                        <h5 className="text-sm font-bold text-foreground mb-2">{step.artifact!.title}</h5>
-                        <div className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed max-h-60 overflow-y-auto custom-scrollbar">
+                        <h5 className="text-base font-semibold text-foreground mb-2">{step.artifact!.title}</h5>
+                        <div className="text-sm text-foreground/80 whitespace-pre-wrap font-mono leading-loose max-h-72 overflow-y-auto custom-scrollbar">
                           {step.artifact!.content}
                         </div>
                       </div>
@@ -432,6 +507,30 @@ export default function TaskList({ tasks }: TaskListProps) {
           </div>
         </div>
       )}
+
+      {/* Chat FAB */}
+      <button
+        onClick={() => setChatOpen(true)}
+        className="fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full bg-primary hover:bg-primary/80 shadow-lg shadow-primary/25 transition-all duration-200 flex items-center justify-center"
+      >
+        {showCriticalBanner && (
+          <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+        )}
+        <MessageCircle className="w-6 h-6 text-white" />
+      </button>
+
+      {/* Chat Drawer Overlay */}
+      {chatOpen && (
+        <div 
+          className="fixed inset-0 bg-black/40 z-30" 
+          onClick={() => setChatOpen(false)} 
+        />
+      )}
+      <AgentChat 
+        isOpen={chatOpen} 
+        onClose={() => setChatOpen(false)} 
+        tasks={tasks} 
+      />
     </>
   );
 }
