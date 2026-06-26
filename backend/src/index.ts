@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import crypto, { randomUUID as uuidv4 } from 'crypto';
 import { decomposeTask, riskAssess, cascadeReplan, generateArtifact, agentChat } from './services/gemini';
@@ -14,7 +14,7 @@ app.use(express.json());
 
 const generateId = () => crypto.randomBytes(16).toString('hex');
 
-app.post('/api/tasks', async (req, res) => {
+app.post('/api/tasks', async (req: Request, res: Response) => {
   try {
     const { title, rawInput, deadline } = req.body;
     if (!title || !deadline) {
@@ -78,13 +78,13 @@ app.post('/api/tasks', async (req, res) => {
   }
 });
 
-app.get('/api/tasks', (req, res) => {
+app.get('/api/tasks', (req: Request, res: Response) => {
   res.json(getTasks());
 });
 
-app.post("/api/tasks/:id/risk", async (req, res) => {
+app.post("/api/tasks/:id/risk", async (req: Request, res: Response) => {
   try {
-    const task = getTaskById(req.params.id);
+    const task = getTaskById(req.params.id as string);
     if (!task) return res.status(404).json({ error: "Task not found" });
 
     const now = Date.now();
@@ -104,7 +104,7 @@ app.post("/api/tasks/:id/risk", async (req, res) => {
       user_velocity_profile: task.velocityProfile ?? "unknown",
     });
 
-    updateTask(req.params.id, { 
+    updateTask(req.params.id as string, { 
       riskState: assessment.risk_state, 
       riskReason: assessment.reasoning,
       lastRiskCheckAt: new Date().toISOString()
@@ -116,7 +116,7 @@ app.post("/api/tasks/:id/risk", async (req, res) => {
   }
 });
 
-app.post("/api/replan", async (req, res) => {
+app.post("/api/replan", async (req: Request, res: Response) => {
   try {
     const { triggered_by } = req.body;
     const allTasks = getAllTasks();
@@ -150,9 +150,9 @@ app.post("/api/replan", async (req, res) => {
   }
 });
 
-app.post("/api/tasks/:id/artifact", async (req, res) => {
+app.post("/api/tasks/:id/artifact", async (req: Request, res: Response) => {
   try {
-    const task = getTaskById(req.params.id);
+    const task = getTaskById(req.params.id as string);
     if (!task) return res.status(404).json({ error: "Task not found" });
 
     const { substep_index, artifact_type = "auto" } = req.body;
@@ -186,7 +186,7 @@ app.post("/api/tasks/:id/artifact", async (req, res) => {
       approvedByUser: false
     };
     
-    updateTask(req.params.id, { 
+    updateTask(req.params.id as string, { 
       subSteps: task.subSteps,
       lastTouchedAt: new Date().toISOString()
     });
@@ -198,9 +198,9 @@ app.post("/api/tasks/:id/artifact", async (req, res) => {
   }
 });
 
-app.delete("/api/tasks/:id", async (req, res) => {
+app.delete("/api/tasks/:id", async (req: Request, res: Response) => {
   try {
-    const success = deleteTask(req.params.id);
+    const success = deleteTask(req.params.id as string);
     if (!success) return res.status(404).json({ error: "Task not found" });
     res.json({ success: true });
   } catch (err) {
@@ -209,10 +209,10 @@ app.delete("/api/tasks/:id", async (req, res) => {
   }
 });
 
-app.patch("/api/tasks/:id", async (req, res) => {
+app.patch("/api/tasks/:id", async (req: Request, res: Response) => {
   try {
     const patch = req.body;
-    const updatedTask = updateTask(req.params.id, patch);
+    const updatedTask = updateTask(req.params.id as string, patch);
     if (!updatedTask) return res.status(404).json({ error: "Task not found" });
     res.json(updatedTask);
   } catch (err) {
@@ -222,19 +222,19 @@ app.patch("/api/tasks/:id", async (req, res) => {
 });
 
 // Clock toggle endpoints
-app.post('/api/clock/simulate', (req, res) => {
+app.post('/api/clock/simulate', (req: Request, res: Response) => {
   const { time } = req.body;
   if (!time) return res.status(400).json({ error: "time is required" });
   setSimulatedTime(time);
   res.json({ message: "Simulated time set", currentTime: getNow() });
 });
 
-app.post('/api/clock/real', (req, res) => {
+app.post('/api/clock/real', (req: Request, res: Response) => {
   clearSimulatedTime();
   res.json({ message: "Real time restored", currentTime: getNow() });
 });
 
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', async (req: Request, res: Response) => {
   try {
     const { message } = req.body;
     if (!message) {
