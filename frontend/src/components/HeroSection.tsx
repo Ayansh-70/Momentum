@@ -86,7 +86,7 @@ export default function HeroSection() {
           className="text-muted-foreground/60 text-xs font-light mt-6 opacity-0 animate-fade-up"
           style={{ animationDelay: "0.85s" }}
         >
-          Built at hackathon · Powered by Gemini · Zero setup required
+          Powered by Gemini · Zero setup required
         </p>
       </div>
     </section>
