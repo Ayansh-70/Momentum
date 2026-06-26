@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Clock, AlertTriangle, FileText, CheckCircle2, Circle, Pencil, Trash, Sparkles, MessageCircle } from 'lucide-react';
 import type { Task, SubStep } from '../../types';
+import { API_BASE_URL } from '../../config/api';
 import AgentChat from './AgentChat';
 
 interface TaskListProps {
@@ -52,7 +53,7 @@ export default function TaskList({ tasks }: TaskListProps) {
     localTasks.forEach(task => {
       if (riskMap[task.id] || riskLoading[task.id]) return;
       setRiskLoading(prev => ({ ...prev, [task.id]: true }));
-      fetch(`http://localhost:3000/api/tasks/${task.id}/risk`, { method: 'POST' })
+      fetch(`${API_BASE_URL}/api/tasks/${task.id}/risk`, { method: 'POST' })
         .then(res => res.json())
         .then(data => setRiskMap(prev => ({ ...prev, [task.id]: data.risk_state })))
         .catch(console.error)
@@ -62,7 +63,7 @@ export default function TaskList({ tasks }: TaskListProps) {
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/tasks/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE_URL}/api/tasks/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setLocalTasks(prev => prev.filter(t => t.id !== id));
       }
@@ -76,7 +77,7 @@ export default function TaskList({ tasks }: TaskListProps) {
   const handleSaveEdit = async (id: string) => {
     setEditSaving(true);
     try {
-      const res = await fetch(`http://localhost:3000/api/tasks/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/tasks/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm)
@@ -96,7 +97,7 @@ export default function TaskList({ tasks }: TaskListProps) {
   const handleCompleteTask = async (id: string) => {
     try {
       const now = new Date().toISOString();
-      const res = await fetch(`http://localhost:3000/api/tasks/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/tasks/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'completed', completedAt: now })
@@ -120,7 +121,7 @@ export default function TaskList({ tasks }: TaskListProps) {
     setLocalTasks(prev => prev.map(t => t.id === taskId ? { ...t, subSteps: newSubSteps } : t));
 
     try {
-      await fetch(`http://localhost:3000/api/tasks/${taskId}`, {
+      await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subSteps: newSubSteps })
@@ -134,7 +135,7 @@ export default function TaskList({ tasks }: TaskListProps) {
     const key = `${taskId}-${index}`;
     setArtifactLoading(prev => ({ ...prev, [key]: true }));
     try {
-      const res = await fetch(`http://localhost:3000/api/tasks/${taskId}/artifact`, {
+      const res = await fetch(`${API_BASE_URL}/api/tasks/${taskId}/artifact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ substep_index: index, artifact_type: "auto" })
@@ -167,7 +168,7 @@ export default function TaskList({ tasks }: TaskListProps) {
   const handleReplan = async (taskId: string) => {
     setReplanLoading(true);
     try {
-      const res = await fetch(`http://localhost:3000/api/replan`, {
+      const res = await fetch(`${API_BASE_URL}/api/replan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ triggered_by: taskId })
@@ -529,7 +530,6 @@ export default function TaskList({ tasks }: TaskListProps) {
       <AgentChat 
         isOpen={chatOpen} 
         onClose={() => setChatOpen(false)} 
-        tasks={tasks} 
       />
     </>
   );

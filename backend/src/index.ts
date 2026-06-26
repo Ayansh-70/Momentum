@@ -7,7 +7,9 @@ import { getNow, setSimulatedTime, clearSimulatedTime } from './utils/clock';
 import { Task, SubStep, Artifact } from './types';
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL ?? "http://localhost:5173"
+}));
 app.use(express.json());
 
 const generateId = () => crypto.randomBytes(16).toString('hex');

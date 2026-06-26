@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import TaskForm from '../components/dashboard/TaskForm';
 import TaskList from '../components/dashboard/TaskList';
+import { API_BASE_URL } from '../config/api';
 import type { Task } from '../types';
 
 export default function AppDashboard() {
@@ -14,7 +15,7 @@ export default function AppDashboard() {
 
   const fetchTasks = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/tasks');
+      const res = await fetch(`${API_BASE_URL}/api/tasks`);
       if (res.ok) {
         const data = await res.json();
         // sort by newest first or nearest deadline
@@ -29,7 +30,7 @@ export default function AppDashboard() {
   const handleCreateTask = async (data: { title: string; rawInput: string; deadline: string }) => {
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:3000/api/tasks', {
+      const res = await fetch(`${API_BASE_URL}/api/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)

@@ -1,13 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
-import type { Task } from '../../types';
+import { useState, useRef, useEffect } from 'react';
+import { API_BASE_URL } from '../../config/api';
 
 interface AgentChatProps {
   isOpen: boolean;
   onClose: () => void;
-  tasks: Task[];
+  
 }
 
-export default function AgentChat({ isOpen, onClose, tasks }: AgentChatProps) {
+export default function AgentChat({ isOpen, onClose }: AgentChatProps) {
   const [messages, setMessages] = useState<{ role: "user" | "agent"; content: string }[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,7 +25,7 @@ export default function AgentChat({ isOpen, onClose, tasks }: AgentChatProps) {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:3000/api/chat", {
+      const res = await fetch(`${API_BASE_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text })

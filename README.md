@@ -148,6 +148,17 @@ npm install
 npm run dev
 ```
 
+### Environment Variables
+
+Create a `.env.local` file in the `frontend/` directory:
+```
+VITE_API_URL=http://localhost:3000
+```
+
+For production, set `VITE_API_URL` to your deployed 
+backend URL in your hosting platform's environment 
+variable settings.
+
 Frontend runs on http://localhost:5173
 Backend runs on http://localhost:3000
 
