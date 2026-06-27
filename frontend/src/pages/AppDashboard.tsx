@@ -62,8 +62,9 @@ export default function AppDashboard() {
         {/* Simple Top Nav */}
         <nav className="border-b border-white/10 bg-black/20 backdrop-blur-md sticky top-0 z-50">
           <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-            <Link to="/" className="text-foreground text-lg font-bold tracking-tight uppercase hover:text-primary transition-colors">
-              MOMENTUM <span className="text-primary opacity-80">/ DASHBOARD</span>
+            <Link to="/" className="flex items-center gap-2.5 text-foreground text-lg font-bold tracking-tight uppercase hover:text-primary transition-colors">
+              <img src="/favicon.svg" alt="Momentum Logo" className="w-5 h-5" />
+              <span>MOMENTUM <span className="text-primary opacity-80">/ DASHBOARD</span></span>
             </Link>
             <div className="flex gap-4">
               <span className="text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-2">
