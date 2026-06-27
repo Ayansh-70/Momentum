@@ -4,6 +4,27 @@ dotenv.config();
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function withRetry<T>(operation: () => Promise<T>): Promise<T> {
+  const maxRetries = 3;
+  const delays = [1000, 2000, 4000];
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      if (attempt < maxRetries && (error.status === 429 || error.status === 503)) {
+        const delay = delays[attempt] || 4000;
+        console.warn(`Gemini API error ${error.status}. Retrying in ${delay}ms...`);
+        await sleep(delay);
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error("Unreachable");
+}
+
 export const DECOMPOSE_SYSTEM_PROMPT = `You are the planning module of Momentum, a productivity agent that helps people 
 actually start and finish tasks before deadlines — not just remind them.
 
@@ -56,7 +77,7 @@ export const DECOMPOSE_RESPONSE_SCHEMA: Schema = {
 export const decomposeTask = async (title: string, rawInput: string, deadline: string, currentTimeISO: string) => {
   const prompt = `Task Title: ${title}\nExtra Context: ${rawInput}\nDeadline: ${deadline}\nCurrent Date/Time: ${currentTimeISO}`;
   
-  const response = await ai.models.generateContent({
+  const response = await withRetry(() => ai.models.generateContent({
     model: 'gemini-2.5-flash',
     contents: prompt,
     config: {
@@ -65,7 +86,7 @@ export const decomposeTask = async (title: string, rawInput: string, deadline: s
       responseSchema: DECOMPOSE_RESPONSE_SCHEMA,
       temperature: 0.2,
     }
-  });
+  }));
 
   const text = response.text;
   if (!text) throw new Error("No response from Gemini");
@@ -153,7 +174,7 @@ export async function riskAssess(input: {
   suggest_replan: boolean;
   confidence: "low" | "medium" | "high";
 }> {
-  const result = await ai.models.generateContent({
+  const result = await withRetry(() => ai.models.generateContent({
     model: "gemini-2.5-flash",
     config: {
       systemInstruction: RISK_ASSESS_SYSTEM_PROMPT,
@@ -166,7 +187,7 @@ export async function riskAssess(input: {
         parts: [{ text: JSON.stringify(input) }],
       },
     ],
-  });
+  }));
 
   const raw = result.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
   return JSON.parse(raw);
@@ -259,7 +280,7 @@ export async function cascadeReplan(input: {
   }[];
   confidence: "low" | "medium" | "high";
 }> {
-  const result = await ai.models.generateContent({
+  const result = await withRetry(() => ai.models.generateContent({
     model: "gemini-2.5-flash",
     config: {
       systemInstruction: CASCADE_REPLAN_SYSTEM_PROMPT,
@@ -272,7 +293,7 @@ export async function cascadeReplan(input: {
         parts: [{ text: JSON.stringify(input) }],
       },
     ],
-  });
+  }));
 
   const raw = result.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
   return JSON.parse(raw);
@@ -365,7 +386,7 @@ export async function generateArtifact(input: {
   substep_label: string;
   estimated_completion_mins: number;
 }> {
-  const result = await ai.models.generateContent({
+  const result = await withRetry(() => ai.models.generateContent({
     model: "gemini-2.5-flash",
     config: {
       systemInstruction: GENERATE_ARTIFACT_SYSTEM_PROMPT,
@@ -378,7 +399,7 @@ export async function generateArtifact(input: {
         parts: [{ text: JSON.stringify(input) }],
       },
     ],
-  });
+  }));
 
   const raw = result.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
   return JSON.parse(raw);
@@ -430,7 +451,7 @@ export async function agentChat(input: {
   tasks: any[];
   current_time_iso: string;
 }): Promise<{ reply: string }> {
-  const result = await ai.models.generateContent({
+  const result = await withRetry(() => ai.models.generateContent({
     model: "gemini-2.5-flash",
     config: {
       systemInstruction: AGENT_CHAT_SYSTEM_PROMPT,
@@ -448,7 +469,7 @@ User message: ${input.message}`
         }],
       },
     ],
-  });
+  }));
 
   const reply = result.candidates?.[0]?.content?.parts?.[0]?.text ?? 
     "The Agent Core is unavailable right now.";
