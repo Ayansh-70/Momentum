@@ -254,6 +254,9 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     if (error.status === 429) {
       return res.status(429).json({ error: "The Agent Core is currently unavailable due to Gemini API rate limits (15 requests per minute). Please wait a moment and try again." });
     }
+    if (error.status === 503) {
+      return res.status(503).json({ error: "The Agent Core is currently unavailable due to high demand on the Gemini API. Please try again in a few moments." });
+    }
     res.status(500).json({ error: "Agent Core failed to reply" });
   }
 });
