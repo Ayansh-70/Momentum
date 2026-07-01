@@ -12,7 +12,7 @@ Built solo for a hackathon in 6 days.
 
 ## Demo
 
-> Live demo link: [add after deployment]
+> Live demo link: https://momentum-three-jet.vercel.app/
 
 ---
 
